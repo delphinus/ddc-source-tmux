@@ -1,7 +1,7 @@
 import {
   BaseSource,
   Candidate,
-} from "https://deno.land/x/ddc_vim@v0.2.2/types.ts#^";
+} from "https://deno.land/x/ddc_vim@v0.3.0/types.ts#^";
 
 export class Source extends BaseSource {
   async gatherCandidates(...args: any[]): Promise<Candidate[]> {
