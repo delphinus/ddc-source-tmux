@@ -26,9 +26,9 @@ export class Source extends BaseSource {
   }
 
   private allWords(lines: string[]): string[] {
-    return lines
-      .flatMap((line) => [...line.matchAll(/[a-zA-Z0-9_]+/g)])
+    const words = lines
+      .flatMap((line) => [...line.matchAll(/[-_\w\d]+/g)])
       .map((match) => match[0])
-      .filter((e, i, self) => self.indexOf(e) === i);
+    return Array.from(new Set(words)) // remove duplication
   }
 }
