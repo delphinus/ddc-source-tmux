@@ -7,7 +7,6 @@ export class Source extends BaseSource {
   async gatherCandidates(...args: any[]): Promise<Candidate[]> {
     const panes = await this.panes();
     const results = await Promise.all(panes.map((id) => this.capturePane(id)));
-    console.log(results)
     return this.allWords(results.flat()).map((word) => ({ word }));
   }
 
