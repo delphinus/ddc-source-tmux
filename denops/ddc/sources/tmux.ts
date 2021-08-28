@@ -24,23 +24,23 @@ export class Source extends BaseSource {
   }
 
   private async runCmd(cmd: string[]): Promise<string[]> {
-    const p = Deno.run({ cmd, stdout: "piped", stderr: "null", stdin: "null" });
+    const p = Deno.run({ cmd, stdout: "piped" });
     await p.status();
     return new TextDecoder().decode(await p.output()).split(/\n/);
   }
 
-  private async panes(): Promise<string[]> {
+  private panes(): Promise<string[]> {
     return this.runCmd(["tmux", "list-panes", "-a", "-F", "#D"]);
   }
 
-  private async capturePane(id: string): Promise<string[]> {
-    return this.runCmd(["tmux", "capture-pane", "-J", "-p", "-t", id]);
+  private capturePane(id: string): Promise<string[]> {
+    return this.runCmd(["tmux", "capture-pane", "-p", "-J", "-t", id]);
   }
 
   private allWords(lines: string[]): string[] {
     const words = lines
       .flatMap((line) => [...line.matchAll(/[-_\w\d]+/g)])
-      .map((match) => match[0])
-    return Array.from(new Set(words)) // remove duplication
+      .map((match) => match[0]);
+    return Array.from(new Set(words)); // remove duplication
   }
 }
