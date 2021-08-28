@@ -28,11 +28,18 @@ call ddc#custom#patch_global('sources', ['tmux'])
 call ddc#custom#patch_global('sourceOptions', {
       \ 'tmux': {'mark': 'T'},
       \ })
+
+call ddc#custom#patch_global('sourceParams', {
+      \ 'tmux': {'currentWinOnly': v:true},
+      \ })
 ```
 
 ## Params
 
+* `currentWinOnly`: If true, it gathers candidates only from panes on the current window. (default: `v:false`)
+
 ## TODO
 
-* [ ] Limit candidates from panes of the window you are seeing.
-* [ ] performance?
+* [x] Limit candidates from panes of the window you are seeing.
+* [x] performance?
+   - It seems fast enough.

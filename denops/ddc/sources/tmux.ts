@@ -3,7 +3,14 @@ import {
   BaseSource,
   Candidate,
 } from "https://deno.land/x/ddc_vim@v0.3.0/types.ts#^";
-import { OnInitArguments } from "https://deno.land/x/ddc_vim@v0.3.0/base/source.ts#^";
+import {
+  GatherCandidatesArguments,
+  OnInitArguments,
+} from "https://deno.land/x/ddc_vim@v0.3.0/base/source.ts#^";
+
+interface Params {
+  currentWinOnly: boolean;
+}
 
 export class Source extends BaseSource {
   private available = false;
@@ -15,11 +22,14 @@ export class Source extends BaseSource {
     this.available = hasExecutable && inTmux;
   }
 
-  async gatherCandidates(..._args: any[]): Promise<Candidate[]> {
+  async gatherCandidates({
+    sourceParams,
+  }: GatherCandidatesArguments): Promise<Candidate[]> {
     if (!this.available) {
       return [];
     }
-    const panes = await this.panes();
+    const { currentWinOnly } = (sourceParams as unknown) as Params;
+    const panes = await this.panes(currentWinOnly);
     const results = await Promise.all(panes.map((id) => this.capturePane(id)));
     return this.allWords(results.flat()).map((word) => ({ word }));
   }
@@ -30,8 +40,14 @@ export class Source extends BaseSource {
     return new TextDecoder().decode(await p.output()).split(/\n/);
   }
 
-  private panes(): Promise<string[]> {
-    return this.runCmd(["tmux", "list-panes", "-a", "-F", "#D"]);
+  private panes(currentWinOnly?: boolean): Promise<string[]> {
+    return this.runCmd([
+      "tmux",
+      "list-panes",
+      "-F",
+      "#D",
+      ...(currentWinOnly ? [] : ["-a"]),
+    ]);
   }
 
   private capturePane(id: string): Promise<string[]> {
