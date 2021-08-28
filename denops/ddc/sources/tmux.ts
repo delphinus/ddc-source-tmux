@@ -1,3 +1,4 @@
+import { fn } from "https://deno.land/x/ddc_vim@v0.3.0/deps.ts#^";
 import {
   BaseSource,
   Candidate,
@@ -8,7 +9,7 @@ export class Source extends BaseSource {
   private available = false;
 
   async onInit({ denops }: OnInitArguments): Promise<void> {
-    const hasExecutable = !!(await denops.eval("executable('tmux')"));
+    const hasExecutable = (await fn.executable(denops, "tmux")) === 1;
     const env = Deno.env.get("TMUX");
     const inTmux = typeof env === "string" && env !== "";
     this.available = hasExecutable && inTmux;
