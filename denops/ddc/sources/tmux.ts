@@ -2,9 +2,22 @@ import {
   BaseSource,
   Candidate,
 } from "https://deno.land/x/ddc_vim@v0.3.0/types.ts#^";
+import { OnInitArguments } from "https://deno.land/x/ddc_vim@v0.3.0/base/source.ts#^";
 
 export class Source extends BaseSource {
-  async gatherCandidates(...args: any[]): Promise<Candidate[]> {
+  private available = false;
+
+  async onInit({ denops }: OnInitArguments): Promise<void> {
+    const hasExecutable = !!(await denops.eval("executable('tmux')"));
+    const env = Deno.env.get("TMUX");
+    const inTmux = typeof env === "string" && env !== "";
+    this.available = hasExecutable && inTmux;
+  }
+
+  async gatherCandidates(..._args: any[]): Promise<Candidate[]> {
+    if (!this.available) {
+      return [];
+    }
     const panes = await this.panes();
     const results = await Promise.all(panes.map((id) => this.capturePane(id)));
     return this.allWords(results.flat()).map((word) => ({ word }));
