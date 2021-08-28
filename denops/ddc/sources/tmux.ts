@@ -56,7 +56,7 @@ export class Source extends BaseSource {
 
   private allWords(lines: string[]): string[] {
     const words = lines
-      .flatMap((line) => [...line.matchAll(/[-_\w\d]+/g)])
+      .flatMap((line) => [...line.matchAll(/[-_\p{L}\d]+/gu)])
       .map((match) => match[0]);
     return Array.from(new Set(words)); // remove duplication
   }
