@@ -34,6 +34,12 @@ export class Source extends BaseSource {
     return this.allWords(results.flat()).map((word) => ({ word }));
   }
 
+  params(): Record<string, unknown> {
+    return {
+      currentWinOnly: false,
+    }
+  }
+
   private async runCmd(cmd: string[]): Promise<string[]> {
     const p = Deno.run({ cmd, stdout: "piped" });
     await p.status();
