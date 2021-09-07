@@ -13,6 +13,13 @@ interface Params {
   executable: string;
 }
 
+interface PaneInfo {
+  sessionName: string;
+  windowIndex: string;
+  paneIndex: string;
+  id: string;
+}
+
 export class Source extends BaseSource {
   private available = false;
   private defaultExecutable = "tmux";
@@ -42,9 +49,21 @@ export class Source extends BaseSource {
     const { currentWinOnly, executable } = (sourceParams as unknown) as Params;
     const paneInfos = await this.panes(executable, currentWinOnly);
     const results = await Promise.all(
-      panes.map((id) => this.capturePane(executable, id))
+      paneInfos.map(
+        ({ sessionName, windowIndex, paneIndex, id }) =>
+          this.capturePane(executable, id)
+            .then((result) => ({
+              kind: `${sessionName}:${windowIndex}.${paneIndex}`,
+              result,
+            }))
+      )
     );
-    return this.allWords(results.flat()).map((word) => ({ word }));
+    return results.reduce<Candidate[]>((a, { kind, result }) => {
+      for (const word of this.allWords(result)) {
+        a.push({ word, kind });
+      }
+      return a
+    }, [])
   }
 
   params(): Record<string, unknown> {
@@ -63,14 +82,17 @@ export class Source extends BaseSource {
   private panes(
     executable: string,
     currentWinOnly?: boolean
-  ): Promise<string[]> {
+  ): Promise<PaneInfo[]> {
     return this.runCmd([
       executable,
       "list-panes",
       "-F",
-      "#D",
+      "#S,#I,#P,#D",
       ...(currentWinOnly ? [] : ["-a"]),
-    ]);
+    ]).then((lines) => lines.map((line) => {
+      const [sessionName, windowIndex, paneIndex, id] = line.split(/,/);
+      return { sessionName, windowIndex, paneIndex, id };
+    }));
   }
 
   private capturePane(executable: string, id: string): Promise<string[]> {
