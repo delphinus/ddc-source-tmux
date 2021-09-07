@@ -79,20 +79,25 @@ export class Source extends BaseSource {
     return new TextDecoder().decode(await p.output()).split(/\n/);
   }
 
-  private panes(
+  private async panes(
     executable: string,
     currentWinOnly?: boolean
   ): Promise<PaneInfo[]> {
-    return this.runCmd([
+    const lines = await this.runCmd([
       executable,
       "list-panes",
       "-F",
       "#S,#I,#P,#D",
       ...(currentWinOnly ? [] : ["-a"]),
-    ]).then((lines) => lines.map((line) => {
-      const [sessionName, windowIndex, paneIndex, id] = line.split(/,/);
-      return { sessionName, windowIndex, paneIndex, id };
-    }));
+    ])
+    return lines.reduce<PaneInfo[]>((a, line) => {
+      const cells = line.split(/,/);
+      if (cells.length === 4) {
+        const [sessionName, windowIndex, paneIndex, id] = cells;
+        a.push({ sessionName, windowIndex, paneIndex, id });
+      }
+      return a;
+    }, []);
   }
 
   private capturePane(executable: string, id: string): Promise<string[]> {
