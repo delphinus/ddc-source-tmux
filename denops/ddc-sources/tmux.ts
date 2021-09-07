@@ -90,14 +90,11 @@ export class Source extends BaseSource {
       "#S,#I,#P,#D",
       ...(currentWinOnly ? [] : ["-a"]),
     ])
-    return lines.reduce<PaneInfo[]>((a, line) => {
-      const cells = line.split(/,/);
-      if (cells.length === 4) {
-        const [sessionName, windowIndex, paneIndex, id] = cells;
-        a.push({ sessionName, windowIndex, paneIndex, id });
-      }
-      return a;
-    }, []);
+    return lines.map((line) => line.split(/,/))
+      .filter((cells) => cells.length === 4)
+      .map(([sessionName, windowIndex, paneIndex, id]) => ({
+        sessionName, windowIndex, paneIndex, id,
+      }));
   }
 
   private capturePane(executable: string, id: string): Promise<string[]> {
