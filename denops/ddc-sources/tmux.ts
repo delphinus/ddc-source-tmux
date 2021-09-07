@@ -83,18 +83,19 @@ export class Source extends BaseSource {
     executable: string,
     currentWinOnly?: boolean
   ): Promise<PaneInfo[]> {
-    const lines = await this.runCmd([
-      executable,
-      "list-panes",
-      "-F",
-      "#S,#I,#P,#D",
-      ...(currentWinOnly ? [] : ["-a"]),
-    ])
-    return lines.map((line) => line.split(/,/))
-      .filter((cells) => cells.length === 4)
-      .map(([sessionName, windowIndex, paneIndex, id]) => ({
-        sessionName, windowIndex, paneIndex, id,
-      }));
+      return this.runCmd([
+        executable,
+        "list-panes",
+        "-F",
+        "#S,#I,#P,#D",
+        ...(currentWinOnly ? [] : ["-a"]),
+      ]).then(
+        (lines) => lines.map((line) => line.split(/,/))
+          .filter((cells) => cells.length === 4)
+          .map(([sessionName, windowIndex, paneIndex, id]) => ({
+            sessionName, windowIndex, paneIndex, id,
+          }))
+      );
   }
 
   private capturePane(executable: string, id: string): Promise<string[]> {
