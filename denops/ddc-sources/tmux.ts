@@ -10,16 +10,27 @@ import {
 
 interface Params {
   currentWinOnly: boolean;
+  executable: string;
 }
 
 export class Source extends BaseSource {
   private available = false;
+  private defaultExecutable = "tmux";
 
-  async onInit({ denops }: OnInitArguments): Promise<void> {
-    const hasExecutable = (await fn.executable(denops, "tmux")) === 1;
+  async onInit({ denops, sourceParams }: OnInitArguments): Promise<void> {
+    // old ddc.vim has no sourceParams here
+    const executable = sourceParams ?
+      sourceParams.executable : this.defaultExecutable;
+    if (typeof executable !== "string") {
+      await this.print_error(denops, "executable should be a string");
+      return;
+    }
+    if ((await fn.executable(denops, executable)) !== 1) {
+      await this.print_error(denops, "executable not found");
+      return;
+    }
     const env = Deno.env.get("TMUX");
-    const inTmux = typeof env === "string" && env !== "";
-    this.available = hasExecutable && inTmux;
+    this.available = typeof env === "string" && env !== "";
   }
 
   async gatherCandidates({
@@ -28,15 +39,18 @@ export class Source extends BaseSource {
     if (!this.available) {
       return [];
     }
-    const { currentWinOnly } = (sourceParams as unknown) as Params;
-    const panes = await this.panes(currentWinOnly);
-    const results = await Promise.all(panes.map((id) => this.capturePane(id)));
+    const { currentWinOnly, executable } = (sourceParams as unknown) as Params;
+    const paneInfos = await this.panes(executable, currentWinOnly);
+    const results = await Promise.all(
+      panes.map((id) => this.capturePane(executable, id))
+    );
     return this.allWords(results.flat()).map((word) => ({ word }));
   }
 
   params(): Record<string, unknown> {
     return {
       currentWinOnly: false,
+      executable: this.defaultExecutable,
     }
   }
 
@@ -46,9 +60,12 @@ export class Source extends BaseSource {
     return new TextDecoder().decode(await p.output()).split(/\n/);
   }
 
-  private panes(currentWinOnly?: boolean): Promise<string[]> {
+  private panes(
+    executable: string,
+    currentWinOnly?: boolean
+  ): Promise<string[]> {
     return this.runCmd([
-      "tmux",
+      executable,
       "list-panes",
       "-F",
       "#D",
@@ -56,8 +73,8 @@ export class Source extends BaseSource {
     ]);
   }
 
-  private capturePane(id: string): Promise<string[]> {
-    return this.runCmd(["tmux", "capture-pane", "-p", "-J", "-t", id]);
+  private capturePane(executable: string, id: string): Promise<string[]> {
+    return this.runCmd([executable, "capture-pane", "-p", "-J", "-t", id]);
   }
 
   private allWords(lines: string[]): string[] {
@@ -65,5 +82,9 @@ export class Source extends BaseSource {
       .flatMap((line) => [...line.matchAll(/[-_\p{L}\d]+/gu)])
       .map((match) => match[0]);
     return Array.from(new Set(words)); // remove duplication
+  }
+
+  private async print_error(denops: Denops, message: string): Promise<void> {
+    await denops.call("ddc#util#print_error", message, "ddc-tmux")
   }
 }
