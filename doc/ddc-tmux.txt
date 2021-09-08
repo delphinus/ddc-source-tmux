@@ -46,6 +46,18 @@ EXAMPLES						     *ddc-tmux-examples*
 	      \ 'tmux': {'executable': '/usr/local/bin/tmux'},
 	      \ })
 <
+This shows such completions below.
+>
+	   v Cursor position
+	ins|
+	instance             0:2.1 [T]
+	instructions         0:3.1 [T]
+	in_progress          0:2.1 [T]
+	initialSteps         0:2.1 [T]
+	invalid_params       0:2.1 [T]
+
+Digits in the menu means `${sessionName}:${windowIndex}.${paneIndex}`. This is
+the same as ones `tmux list-panes` shows in default.
 
 ==============================================================================
 PARAMS							       *ddc-tmux-params*
