@@ -26,8 +26,9 @@ export class Source extends BaseSource {
 
   async onInit({ denops, sourceParams }: OnInitArguments): Promise<void> {
     // old ddc.vim has no sourceParams here
-    const executable = sourceParams ?
-      sourceParams.executable : this.defaultExecutable;
+    const executable = sourceParams
+      ? sourceParams.executable
+      : this.defaultExecutable;
     if (typeof executable !== "string") {
       await this.print_error(denops, "executable should be a string");
       return;
@@ -55,22 +56,22 @@ export class Source extends BaseSource {
             .then((result) => ({
               kind: `${sessionName}:${windowIndex}.${paneIndex}`,
               result,
-            }))
-      )
+            })),
+      ),
     );
     return results.reduce<Candidate[]>((a, { kind, result }) => {
       for (const word of this.allWords(result)) {
         a.push({ word, kind });
       }
-      return a
-    }, [])
+      return a;
+    }, []);
   }
 
   params(): Record<string, unknown> {
     return {
       currentWinOnly: false,
       executable: this.defaultExecutable,
-    }
+    };
   }
 
   private async runCmd(cmd: string[]): Promise<string[]> {
@@ -81,21 +82,25 @@ export class Source extends BaseSource {
 
   private async panes(
     executable: string,
-    currentWinOnly?: boolean
+    currentWinOnly?: boolean,
   ): Promise<PaneInfo[]> {
-      return this.runCmd([
-        executable,
-        "list-panes",
-        "-F",
-        "#S,#I,#P,#D",
-        ...(currentWinOnly ? [] : ["-a"]),
-      ]).then(
-        (lines) => lines.map((line) => line.split(/,/))
+    return this.runCmd([
+      executable,
+      "list-panes",
+      "-F",
+      "#S,#I,#P,#D",
+      ...(currentWinOnly ? [] : ["-a"]),
+    ]).then(
+      (lines) =>
+        lines.map((line) => line.split(/,/))
           .filter((cells) => cells.length === 4)
           .map(([sessionName, windowIndex, paneIndex, id]) => ({
-            sessionName, windowIndex, paneIndex, id,
-          }))
-      );
+            sessionName,
+            windowIndex,
+            paneIndex,
+            id,
+          })),
+    );
   }
 
   private capturePane(executable: string, id: string): Promise<string[]> {
@@ -110,6 +115,6 @@ export class Source extends BaseSource {
   }
 
   private async print_error(denops: Denops, message: string): Promise<void> {
-    await denops.call("ddc#util#print_error", message, "ddc-tmux")
+    await denops.call("ddc#util#print_error", message, "ddc-tmux");
   }
 }
