@@ -1,17 +1,17 @@
-import { Denops, fn } from "https://deno.land/x/ddc_vim@v0.5.2/deps.ts#^";
+import { Denops, fn } from "https://deno.land/x/ddc_vim@v0.13.0/deps.ts#^";
 import {
   BaseSource,
   Candidate,
-} from "https://deno.land/x/ddc_vim@v0.5.2/types.ts#^";
+} from "https://deno.land/x/ddc_vim@v0.13.0/types.ts#^";
 import {
   GatherCandidatesArguments,
   OnInitArguments,
-} from "https://deno.land/x/ddc_vim@v0.5.2/base/source.ts#^";
+} from "https://deno.land/x/ddc_vim@v0.13.0/base/source.ts#^";
 
-interface Params {
+type Params = {
   currentWinOnly: boolean;
   executable: string;
-}
+};
 
 interface PaneInfo {
   sessionName: string;
@@ -20,11 +20,13 @@ interface PaneInfo {
   id: string;
 }
 
-export class Source extends BaseSource {
+export class Source extends BaseSource<Params> {
   private available = false;
   private defaultExecutable = "tmux";
 
-  async onInit({ denops, sourceParams }: OnInitArguments): Promise<void> {
+  async onInit(
+    { denops, sourceParams }: OnInitArguments<Params>,
+  ): Promise<void> {
     // old ddc.vim has no sourceParams here
     const executable = sourceParams
       ? sourceParams.executable
@@ -43,7 +45,7 @@ export class Source extends BaseSource {
 
   async gatherCandidates({
     sourceParams,
-  }: GatherCandidatesArguments): Promise<Candidate[]> {
+  }: GatherCandidatesArguments<Params>): Promise<Candidate[]> {
     if (!this.available) {
       return [];
     }
@@ -67,7 +69,7 @@ export class Source extends BaseSource {
     }, []);
   }
 
-  params(): Record<string, unknown> {
+  params(): Params {
     return {
       currentWinOnly: false,
       executable: this.defaultExecutable,
@@ -84,23 +86,21 @@ export class Source extends BaseSource {
     executable: string,
     currentWinOnly?: boolean,
   ): Promise<PaneInfo[]> {
-    return this.runCmd([
+    const lines = await this.runCmd([
       executable,
       "list-panes",
       "-F",
       "#S,#I,#P,#D",
       ...(currentWinOnly ? [] : ["-a"]),
-    ]).then(
-      (lines) =>
-        lines.map((line) => line.split(/,/))
-          .filter((cells) => cells.length === 4)
-          .map(([sessionName, windowIndex, paneIndex, id]) => ({
-            sessionName,
-            windowIndex,
-            paneIndex,
-            id,
-          })),
-    );
+    ]);
+    return lines.map((line) => line.split(/,/))
+      .filter((cells) => cells.length === 4)
+      .map(([sessionName, windowIndex, paneIndex, id]) => ({
+        sessionName,
+        windowIndex,
+        paneIndex,
+        id,
+      }));
   }
 
   private capturePane(executable: string, id: string): Promise<string[]> {
