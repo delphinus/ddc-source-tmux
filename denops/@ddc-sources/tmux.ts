@@ -78,8 +78,9 @@ export class Source extends BaseSource<Params> {
 
   private async runCmd(cmd: string[]): Promise<string[]> {
     const p = Deno.run({ cmd, stdout: "piped" });
-    await p.status();
-    return new TextDecoder().decode(await p.output()).split(/\n/);
+    const [_, out] = await Promise.all([p.status(), p.output()]);
+    p.close();
+    return new TextDecoder().decode(out).split(/\n/);
   }
 
   private async panes(
