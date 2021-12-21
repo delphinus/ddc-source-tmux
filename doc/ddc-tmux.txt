@@ -63,17 +63,25 @@ the same as ones `tmux list-panes` shows in default.
 PARAMS							       *ddc-tmux-params*
 
 						 *ddc-tmux-param-currentWinOnly*
-currentWinOnly	(boolean)
-		If true, it gathers candidates only from panes on the current
-		window.
+currentWinOnly		(boolean)
+			If true, it gathers candidates only from panes on the
+			current window.
 
-		Default: v:false
+			Default: v:false
+
+					     *ddc-tmux-param-excludeCurrentPane*
+excludeCurrentPane	(boolean)
+			If true, it gathers candidates from panes other than
+			the current one. This is the default behavior by
+			https://github.com/wellle/tmux-complete.vim
+
+			Default: v:false
 
 						     *ddc-tmux-param-executable*
-executable	(string)
-		Path for the executable of Universal Ctags.
+executable		(string)
+			Path for the executable of Universal Ctags.
 
-		Default: "tmux"
+			Default: "tmux"
 
 
 ==============================================================================
