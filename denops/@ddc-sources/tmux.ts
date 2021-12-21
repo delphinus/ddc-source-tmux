@@ -23,6 +23,7 @@ interface PaneInfo {
 export class Source extends BaseSource<Params> {
   private available = false;
   private defaultExecutable = "tmux";
+  private executable = "";
 
   async onInit(
     { denops, sourceParams }: OnInitArguments<Params>,
@@ -41,6 +42,7 @@ export class Source extends BaseSource<Params> {
     }
     const env = Deno.env.get("TMUX");
     this.available = typeof env === "string" && env !== "";
+    this.executable = executable;
   }
 
   async gatherCandidates({
@@ -49,12 +51,11 @@ export class Source extends BaseSource<Params> {
     if (!this.available) {
       return [];
     }
-    const { currentWinOnly, executable } = (sourceParams as unknown) as Params;
-    const paneInfos = await this.panes(executable, currentWinOnly);
+    const paneInfos = await this.panes(sourceParams);
     const results = await Promise.all(
       paneInfos.map(
         ({ sessionName, windowIndex, paneIndex, id }) =>
-          this.capturePane(executable, id)
+          this.capturePane(id)
             .then((result) => ({
               kind: `${sessionName}:${windowIndex}.${paneIndex}`,
               result,
@@ -84,11 +85,10 @@ export class Source extends BaseSource<Params> {
   }
 
   private async panes(
-    executable: string,
-    currentWinOnly?: boolean,
+    { currentWinOnly }: Params,
   ): Promise<PaneInfo[]> {
     const lines = await this.runCmd([
-      executable,
+      this.executable,
       "list-panes",
       "-F",
       "#S,#I,#P,#D",
@@ -104,8 +104,8 @@ export class Source extends BaseSource<Params> {
       }));
   }
 
-  private capturePane(executable: string, id: string): Promise<string[]> {
-    return this.runCmd([executable, "capture-pane", "-p", "-J", "-t", id]);
+  private capturePane(id: string): Promise<string[]> {
+    return this.runCmd([this.executable, "capture-pane", "-p", "-J", "-t", id]);
   }
 
   private allWords(lines: string[]): string[] {
