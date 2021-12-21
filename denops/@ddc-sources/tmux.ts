@@ -10,6 +10,7 @@ import {
 
 type Params = {
   currentWinOnly: boolean;
+  excludeCurrentPane: boolean;
   executable: string;
 };
 
@@ -72,6 +73,7 @@ export class Source extends BaseSource<Params> {
   params(): Params {
     return {
       currentWinOnly: false,
+      excludeCurrentPane: false,
       executable: this.defaultExecutable,
     };
   }
@@ -84,23 +86,24 @@ export class Source extends BaseSource<Params> {
   }
 
   private async panes(
-    { currentWinOnly }: Params,
+    { currentWinOnly, excludeCurrentPane }: Params,
   ): Promise<PaneInfo[]> {
     const lines = await this.runCmd([
       this.executable,
       "list-panes",
       "-F",
-      "#S,#I,#P,#D",
+      "#S,#I,#P,#D,#{pane_active}",
       ...(currentWinOnly ? [] : ["-a"]),
     ]);
-    return lines.map((line) => line.split(/,/))
-      .filter((cells) => cells.length === 4)
-      .map(([sessionName, windowIndex, paneIndex, id]) => ({
-        sessionName,
-        windowIndex,
-        paneIndex,
-        id,
-      }));
+    return lines.map((line) => line.split(/,/)).reduce<PaneInfo[]>((a, b) => {
+      if (b.length === 5) {
+        const [sessionName, windowIndex, paneIndex, id, paneActive] = b;
+        if (!excludeCurrentPane || paneActive !== "1") {
+          a.push({ sessionName, windowIndex, paneIndex, id });
+        }
+      }
+      return a;
+    }, []);
   }
 
   private capturePane(id: string): Promise<string[]> {
