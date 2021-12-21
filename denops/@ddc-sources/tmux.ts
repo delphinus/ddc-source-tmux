@@ -10,6 +10,7 @@ import {
 
 type Params = {
   currentWinOnly: boolean;
+  excludeCurrentPane: boolean;
   executable: string;
 };
 
@@ -23,6 +24,7 @@ interface PaneInfo {
 export class Source extends BaseSource<Params> {
   private available = false;
   private defaultExecutable = "tmux";
+  private executable = "";
 
   async onInit(
     { denops, sourceParams }: OnInitArguments<Params>,
@@ -39,8 +41,8 @@ export class Source extends BaseSource<Params> {
       await this.print_error(denops, "executable not found");
       return;
     }
-    const env = Deno.env.get("TMUX");
-    this.available = typeof env === "string" && env !== "";
+    this.available = true;
+    this.executable = executable;
   }
 
   async gatherCandidates({
@@ -49,12 +51,11 @@ export class Source extends BaseSource<Params> {
     if (!this.available) {
       return [];
     }
-    const { currentWinOnly, executable } = (sourceParams as unknown) as Params;
-    const paneInfos = await this.panes(executable, currentWinOnly);
+    const paneInfos = await this.panes(sourceParams);
     const results = await Promise.all(
       paneInfos.map(
         ({ sessionName, windowIndex, paneIndex, id }) =>
-          this.capturePane(executable, id)
+          this.capturePane(id)
             .then((result) => ({
               kind: `${sessionName}:${windowIndex}.${paneIndex}`,
               result,
@@ -72,6 +73,7 @@ export class Source extends BaseSource<Params> {
   params(): Params {
     return {
       currentWinOnly: false,
+      excludeCurrentPane: false,
       executable: this.defaultExecutable,
     };
   }
@@ -84,28 +86,28 @@ export class Source extends BaseSource<Params> {
   }
 
   private async panes(
-    executable: string,
-    currentWinOnly?: boolean,
+    { currentWinOnly, excludeCurrentPane }: Params,
   ): Promise<PaneInfo[]> {
     const lines = await this.runCmd([
-      executable,
+      this.executable,
       "list-panes",
       "-F",
-      "#S,#I,#P,#D",
+      "#S,#I,#P,#D,#{pane_active}",
       ...(currentWinOnly ? [] : ["-a"]),
     ]);
-    return lines.map((line) => line.split(/,/))
-      .filter((cells) => cells.length === 4)
-      .map(([sessionName, windowIndex, paneIndex, id]) => ({
-        sessionName,
-        windowIndex,
-        paneIndex,
-        id,
-      }));
+    return lines.map((line) => line.split(/,/)).reduce<PaneInfo[]>((a, b) => {
+      if (b.length === 5) {
+        const [sessionName, windowIndex, paneIndex, id, paneActive] = b;
+        if (!excludeCurrentPane || paneActive !== "1") {
+          a.push({ sessionName, windowIndex, paneIndex, id });
+        }
+      }
+      return a;
+    }, []);
   }
 
-  private capturePane(executable: string, id: string): Promise<string[]> {
-    return this.runCmd([executable, "capture-pane", "-p", "-J", "-t", id]);
+  private capturePane(id: string): Promise<string[]> {
+    return this.runCmd([this.executable, "capture-pane", "-p", "-J", "-t", id]);
   }
 
   private allWords(lines: string[]): string[] {
