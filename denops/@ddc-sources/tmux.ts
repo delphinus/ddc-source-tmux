@@ -1,23 +1,22 @@
-import { Denops, fn } from "https://deno.land/x/ddc_vim@v0.13.0/deps.ts#^";
+import { Denops, fn } from "https://deno.land/x/ddc_vim@v1.2.0/deps.ts#^";
 import {
   BaseSource,
   Candidate,
-} from "https://deno.land/x/ddc_vim@v0.13.0/types.ts#^";
+} from "https://deno.land/x/ddc_vim@v1.2.0/types.ts#^";
 import {
   GatherCandidatesArguments,
   OnInitArguments,
-} from "https://deno.land/x/ddc_vim@v0.13.0/base/source.ts#^";
+} from "https://deno.land/x/ddc_vim@v1.2.0/base/source.ts#^";
 
 type Params = {
   currentWinOnly: boolean;
   excludeCurrentPane: boolean;
   executable: string;
+  kindFormat: string;
 };
 
 interface PaneInfo {
-  sessionName: string;
-  windowIndex: string;
-  paneIndex: string;
+  kind: string;
   id: string;
 }
 
@@ -53,13 +52,8 @@ export class Source extends BaseSource<Params> {
     }
     const paneInfos = await this.panes(sourceParams);
     const results = await Promise.all(
-      paneInfos.map(
-        ({ sessionName, windowIndex, paneIndex, id }) =>
-          this.capturePane(id)
-            .then((result) => ({
-              kind: `${sessionName}:${windowIndex}.${paneIndex}`,
-              result,
-            })),
+      paneInfos.map(({ kind, id }) =>
+        this.capturePane(id).then((result) => ({ kind, result }))
       ),
     );
     return results.reduce<Candidate[]>((a, { kind, result }) => {
@@ -75,6 +69,7 @@ export class Source extends BaseSource<Params> {
       currentWinOnly: false,
       excludeCurrentPane: false,
       executable: this.defaultExecutable,
+      kindFormat: "#{session_name}:#{window_index}.#{pane_index}",
     };
   }
 
@@ -86,20 +81,22 @@ export class Source extends BaseSource<Params> {
   }
 
   private async panes(
-    { currentWinOnly, excludeCurrentPane }: Params,
+    { currentWinOnly, excludeCurrentPane, kindFormat }: Params,
   ): Promise<PaneInfo[]> {
+    const sep = "\x1f"; // U+001F UNIT SEPARATOR
     const lines = await this.runCmd([
       this.executable,
       "list-panes",
       "-F",
-      "#S,#I,#P,#D,#{pane_active}",
+      [kindFormat, "#D", "#{pane_active}"].join(sep),
       ...(currentWinOnly ? [] : ["-a"]),
     ]);
-    return lines.map((line) => line.split(/,/)).reduce<PaneInfo[]>((a, b) => {
-      if (b.length === 5) {
-        const [sessionName, windowIndex, paneIndex, id, paneActive] = b;
+    return lines.reduce<PaneInfo[]>((a, b) => {
+      const cells = b.split(sep);
+      if (cells.length === 3) {
+        const [kind, id, paneActive] = cells;
         if (!excludeCurrentPane || paneActive !== "1") {
-          a.push({ sessionName, windowIndex, paneIndex, id });
+          a.push({ kind, id });
         }
       }
       return a;
