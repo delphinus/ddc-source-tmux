@@ -1,12 +1,12 @@
-import { Denops, fn } from "https://deno.land/x/ddc_vim@v0.13.0/deps.ts#^";
+import { Denops, fn } from "https://deno.land/x/ddc_vim@v1.2.0/deps.ts#^";
 import {
   BaseSource,
   Candidate,
-} from "https://deno.land/x/ddc_vim@v0.13.0/types.ts#^";
+} from "https://deno.land/x/ddc_vim@v1.2.0/types.ts#^";
 import {
   GatherCandidatesArguments,
   OnInitArguments,
-} from "https://deno.land/x/ddc_vim@v0.13.0/base/source.ts#^";
+} from "https://deno.land/x/ddc_vim@v1.2.0/base/source.ts#^";
 
 type Params = {
   currentWinOnly: boolean;
