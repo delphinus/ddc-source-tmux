@@ -81,7 +81,7 @@ excludeCurrentPane	(boolean)
 
 						     *ddc-tmux-param-executable*
 executable		(string)
-			Path for the executable of Universal Ctags.
+			Path for the executable of Tmux.
 
 			Default: `"tmux"`
 
