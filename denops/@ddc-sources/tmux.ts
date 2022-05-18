@@ -74,10 +74,18 @@ export class Source extends BaseSource<Params> {
   }
 
   private async runCmd(cmd: string[]): Promise<string[]> {
-    const p = Deno.run({ cmd, stdout: "piped" });
-    const [_, out] = await Promise.all([p.status(), p.output()]);
+    const p = Deno.run({ cmd, stdout: "piped", stderr: "piped" });
+    const [status, out, err] = await Promise.all([
+      p.status(),
+      p.output(),
+      p.stderrOutput(),
+    ]);
     p.close();
-    return new TextDecoder().decode(out).split(/\n/);
+    const d = new TextDecoder();
+    if (status.success) {
+      return d.decode(out).split(/\n/);
+    }
+    throw new Error(d.decode(err));
   }
 
   private async panes(
@@ -90,7 +98,12 @@ export class Source extends BaseSource<Params> {
       "-F",
       [kindFormat, "#D", "#{pane_active}"].join(sep),
       ...(currentWinOnly ? [] : ["-a"]),
-    ]);
+    ]).catch((e) => {
+      if (e instanceof Error && /no server running/.test(e.message)) {
+        return [] as string[];
+      }
+      throw e;
+    });
     return lines.reduce<PaneInfo[]>((a, b) => {
       const cells = b.split(sep);
       if (cells.length === 3) {
