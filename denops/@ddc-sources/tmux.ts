@@ -40,7 +40,8 @@ export class Source extends BaseSource<Params> {
       await this.print_error(denops, "executable not found");
       return;
     }
-    this.available = true;
+    const tmux = Deno.env.get("TMUX");
+    this.available = typeof tmux === "string" && tmux !== "";
     this.executable = executable;
   }
 
