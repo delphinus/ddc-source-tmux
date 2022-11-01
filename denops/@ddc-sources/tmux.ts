@@ -1,12 +1,9 @@
-import { Denops, fn } from "https://deno.land/x/ddc_vim@v1.2.0/deps.ts#^";
+import { Denops, fn } from "https://deno.land/x/ddc_vim@v3.1.0/deps.ts";
+import { BaseSource, Item } from "https://deno.land/x/ddc_vim@v3.1.0/types.ts";
 import {
-  BaseSource,
-  Candidate,
-} from "https://deno.land/x/ddc_vim@v1.2.0/types.ts#^";
-import {
-  GatherCandidatesArguments,
+  GatherArguments,
   OnInitArguments,
-} from "https://deno.land/x/ddc_vim@v1.2.0/base/source.ts#^";
+} from "https://deno.land/x/ddc_vim@v3.1.0/base/source.ts";
 
 type Params = {
   currentWinOnly: boolean;
@@ -44,9 +41,9 @@ export class Source extends BaseSource<Params> {
     this.executable = executable;
   }
 
-  async gatherCandidates({
+  async gather({
     sourceParams,
-  }: GatherCandidatesArguments<Params>): Promise<Candidate[]> {
+  }: GatherArguments<Params>): Promise<Item[]> {
     if (!this.available) {
       return [];
     }
@@ -56,7 +53,7 @@ export class Source extends BaseSource<Params> {
         this.capturePane(id).then((result) => ({ kind, result }))
       ),
     );
-    return results.reduce<Candidate[]>((a, { kind, result }) => {
+    return results.reduce<Item[]>((a, { kind, result }) => {
       for (const word of this.allWords(result)) {
         a.push({ word, kind });
       }
