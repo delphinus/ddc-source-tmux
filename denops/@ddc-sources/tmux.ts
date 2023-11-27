@@ -1,9 +1,9 @@
-import { Denops, fn } from "https://deno.land/x/ddc_vim@v3.1.0/deps.ts";
-import { BaseSource, Item } from "https://deno.land/x/ddc_vim@v3.1.0/types.ts";
+import { Denops, fn } from "https://deno.land/x/ddc_vim@v4.3.1/deps.ts";
+import { BaseSource, Item } from "https://deno.land/x/ddc_vim@v4.3.1/types.ts";
 import {
   GatherArguments,
   OnInitArguments,
-} from "https://deno.land/x/ddc_vim@v3.1.0/base/source.ts";
+} from "https://deno.land/x/ddc_vim@v4.3.1/base/source.ts";
 
 type Params = {
   currentWinOnly: boolean;
@@ -22,13 +22,10 @@ export class Source extends BaseSource<Params> {
   private defaultExecutable = "tmux";
   private executable = "";
 
-  async onInit(
+  override async onInit(
     { denops, sourceParams }: OnInitArguments<Params>,
   ): Promise<void> {
-    // old ddc.vim has no sourceParams here
-    const executable = sourceParams
-      ? sourceParams.executable
-      : this.defaultExecutable;
+    const { executable } = sourceParams;
     if (typeof executable !== "string") {
       await this.print_error(denops, "executable should be a string");
       return;
@@ -41,7 +38,7 @@ export class Source extends BaseSource<Params> {
     this.executable = executable;
   }
 
-  async gather({
+  override async gather({
     sourceParams,
   }: GatherArguments<Params>): Promise<Item[]> {
     if (!this.available) {
@@ -61,7 +58,7 @@ export class Source extends BaseSource<Params> {
     }, []);
   }
 
-  params(): Params {
+  override params(): Params {
     return {
       currentWinOnly: false,
       excludeCurrentPane: false,
