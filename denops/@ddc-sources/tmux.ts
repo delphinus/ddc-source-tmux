@@ -17,6 +17,8 @@ interface PaneInfo {
   id: string;
 }
 
+const DECODER = new TextDecoder();
+
 export class Source extends BaseSource<Params> {
   private available = false;
   private defaultExecutable = "tmux";
@@ -67,19 +69,15 @@ export class Source extends BaseSource<Params> {
     };
   }
 
-  private async runCmd(cmd: string[]): Promise<string[]> {
-    const p = Deno.run({ cmd, stdout: "piped", stderr: "piped" });
-    const [status, out, err] = await Promise.all([
-      p.status(),
-      p.output(),
-      p.stderrOutput(),
-    ]);
-    p.close();
-    const d = new TextDecoder();
-    if (status.success) {
-      return d.decode(out).split(/\n/);
+  private async runCmd(args: string[]): Promise<string[]> {
+    const { success, stdout, stderr } = await new Deno.Command(
+      this.executable,
+      { args, stdout: "piped", stderr: "piped" },
+    ).output();
+    if (success) {
+      return DECODER.decode(stdout).split(/\n/);
     }
-    throw new Error(d.decode(err));
+    throw new Error(DECODER.decode(stderr));
   }
 
   private async panes(
@@ -87,7 +85,6 @@ export class Source extends BaseSource<Params> {
   ): Promise<PaneInfo[]> {
     const sep = "\x1f"; // U+001F UNIT SEPARATOR
     const lines = await this.runCmd([
-      this.executable,
       "list-panes",
       "-F",
       [kindFormat, "#D", "#{pane_active}"].join(sep),
@@ -111,7 +108,7 @@ export class Source extends BaseSource<Params> {
   }
 
   private capturePane(id: string): Promise<string[]> {
-    return this.runCmd([this.executable, "capture-pane", "-p", "-J", "-t", id]);
+    return this.runCmd(["capture-pane", "-p", "-J", "-t", id]);
   }
 
   private allWords(lines: string[]): string[] {
