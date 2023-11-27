@@ -20,40 +20,39 @@ interface PaneInfo {
 const DECODER = new TextDecoder();
 
 export class Source extends BaseSource<Params> {
-  private available = false;
-  private defaultExecutable = "tmux";
-  private executable = "";
+  #available = false;
+  #executable = "";
 
   override async onInit(
     { denops, sourceParams }: OnInitArguments<Params>,
   ): Promise<void> {
     const { executable } = sourceParams;
     if (typeof executable !== "string") {
-      await this.print_error(denops, "executable should be a string");
+      await this.#print_error(denops, "executable should be a string");
       return;
     }
     if ((await fn.executable(denops, executable)) !== 1) {
-      await this.print_error(denops, "executable not found");
+      await this.#print_error(denops, "executable not found");
       return;
     }
-    this.available = true;
-    this.executable = executable;
+    this.#available = true;
+    this.#executable = executable;
   }
 
   override async gather({
     sourceParams,
   }: GatherArguments<Params>): Promise<Item[]> {
-    if (!this.available) {
+    if (!this.#available) {
       return [];
     }
-    const paneInfos = await this.panes(sourceParams);
+    const paneInfos = await this.#panes(sourceParams);
     const results = await Promise.all(
       paneInfos.map(({ kind, id }) =>
-        this.capturePane(id).then((result) => ({ kind, result }))
+        this.#capturePane(id).then((result) => ({ kind, result }))
       ),
     );
     return results.reduce<Item[]>((a, { kind, result }) => {
-      for (const word of this.allWords(result)) {
+      for (const word of this.#allWords(result)) {
         a.push({ word, kind });
       }
       return a;
@@ -64,14 +63,14 @@ export class Source extends BaseSource<Params> {
     return {
       currentWinOnly: false,
       excludeCurrentPane: false,
-      executable: this.defaultExecutable,
+      executable: "tmux",
       kindFormat: "#{session_name}:#{window_index}.#{pane_index}",
     };
   }
 
-  private async runCmd(args: string[]): Promise<string[]> {
+  async #runCmd(args: string[]): Promise<string[]> {
     const { success, stdout, stderr } = await new Deno.Command(
-      this.executable,
+      this.#executable,
       { args, stdout: "piped", stderr: "piped" },
     ).output();
     if (success) {
@@ -80,16 +79,16 @@ export class Source extends BaseSource<Params> {
     throw new Error(DECODER.decode(stderr));
   }
 
-  private async panes(
+  async #panes(
     { currentWinOnly, excludeCurrentPane, kindFormat }: Params,
   ): Promise<PaneInfo[]> {
     const sep = "\x1f"; // U+001F UNIT SEPARATOR
-    const lines = await this.runCmd([
+    const lines = await this.#runCmd([
       "list-panes",
       "-F",
       [kindFormat, "#D", "#{pane_active}"].join(sep),
       ...(currentWinOnly ? [] : ["-a"]),
-    ]).catch((e) => {
+    ]).catch((e: unknown) => {
       if (e instanceof Error && /no server running/.test(e.message)) {
         return [] as string[];
       }
@@ -107,18 +106,18 @@ export class Source extends BaseSource<Params> {
     }, []);
   }
 
-  private capturePane(id: string): Promise<string[]> {
-    return this.runCmd(["capture-pane", "-p", "-J", "-t", id]);
+  async #capturePane(id: string): Promise<string[]> {
+    return await this.#runCmd(["capture-pane", "-p", "-J", "-t", id]);
   }
 
-  private allWords(lines: string[]): string[] {
+  #allWords(lines: string[]): string[] {
     const words = lines
       .flatMap((line) => [...line.matchAll(/[-_\p{L}\d]+/gu)])
       .map((match) => match[0]);
     return Array.from(new Set(words)); // remove duplication
   }
 
-  private async print_error(denops: Denops, message: string): Promise<void> {
+  async #print_error(denops: Denops, message: string): Promise<void> {
     await denops.call("ddc#util#print_error", message, "ddc-tmux");
   }
 }
