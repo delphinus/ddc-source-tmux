@@ -19,6 +19,7 @@ interface PaneInfo {
 }
 
 const DECODER = new TextDecoder();
+const SEP = "\x1f"; // U+001F UNIT SEPARATOR
 
 export class Source extends BaseSource<Params> {
   #available = false;
@@ -29,11 +30,11 @@ export class Source extends BaseSource<Params> {
   ): Promise<void> {
     const { executable } = sourceParams;
     if (typeof executable !== "string") {
-      await this.#print_error(denops, "executable should be a string");
+      await this.#printError(denops, "executable should be a string");
       return;
     }
     if ((await fn.executable(denops, executable)) !== 1) {
-      await this.#print_error(denops, "executable not found");
+      await this.#printError(denops, "executable not found");
       return;
     }
     this.#available = true;
@@ -46,9 +47,9 @@ export class Source extends BaseSource<Params> {
     return context.input.search(/[-_\p{L}\d]+$/u);
   }
 
-  override async gather({
-    sourceParams,
-  }: GatherArguments<Params>): Promise<Item[]> {
+  override async gather(
+    { sourceParams }: GatherArguments<Params>,
+  ): Promise<Item[]> {
     if (!this.#available) {
       return [];
     }
@@ -58,12 +59,11 @@ export class Source extends BaseSource<Params> {
         this.#capturePane(id).then((result) => ({ kind, result }))
       ),
     );
-    return results.reduce<Item[]>((a, { kind, result }) => {
-      for (const word of this.#allWords(result)) {
-        a.push({ word, kind });
-      }
-      return a;
-    }, []);
+    return results.reduce<Item[]>(
+      (a, { kind, result }) =>
+        a.concat(this.#allWords(result).map((word) => ({ word, kind }))),
+      [],
+    );
   }
 
   override params(): Params {
@@ -89,20 +89,19 @@ export class Source extends BaseSource<Params> {
   async #panes(
     { currentWinOnly, excludeCurrentPane, kindFormat }: Params,
   ): Promise<PaneInfo[]> {
-    const sep = "\x1f"; // U+001F UNIT SEPARATOR
     const lines = await this.#runCmd([
       "list-panes",
       "-F",
-      [kindFormat, "#D", "#{pane_active}"].join(sep),
+      [kindFormat, "#D", "#{pane_active}"].join(SEP),
       ...(currentWinOnly ? [] : ["-a"]),
     ]).catch((e: unknown) => {
       if (e instanceof Error && /no server running/.test(e.message)) {
-        return [] as string[];
+        return [];
       }
       throw e;
     });
     return lines.reduce<PaneInfo[]>((a, b) => {
-      const cells = b.split(sep);
+      const cells = b.split(SEP);
       if (cells.length === 3) {
         const [kind, id, paneActive] = cells;
         if (!excludeCurrentPane || paneActive !== "1") {
@@ -124,7 +123,7 @@ export class Source extends BaseSource<Params> {
     return Array.from(new Set(words)); // remove duplication
   }
 
-  async #print_error(denops: Denops, message: string): Promise<void> {
+  async #printError(denops: Denops, message: string): Promise<void> {
     await denops.call("ddc#util#print_error", message, "ddc-tmux");
   }
 }
