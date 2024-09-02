@@ -1,10 +1,12 @@
-import { Denops, fn } from "https://deno.land/x/ddc_vim@v4.3.1/deps.ts";
-import { BaseSource, Item } from "https://deno.land/x/ddc_vim@v4.3.1/types.ts";
+import type { Denops } from "jsr:@denops/std@^7.1.1";
+import * as fn from "jsr:@denops/std@^7.1.1/function";
 import {
-  GatherArguments,
-  GetCompletePositionArguments,
-  OnInitArguments,
-} from "https://deno.land/x/ddc_vim@v4.3.1/base/source.ts";
+  BaseSource,
+  type GatherArguments,
+  type GetCompletePositionArguments,
+  type OnInitArguments,
+} from "jsr:@shougo/ddc-vim@^7.0.0/source";
+import type { Item } from "jsr:@shougo/ddc-vim@^7.0.0/types";
 
 type Params = {
   currentWinOnly: boolean;
